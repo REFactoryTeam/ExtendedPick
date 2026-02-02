@@ -1,7 +1,8 @@
 package com.ref.extendedpick.common;
 
 import com.ref.extendedpick.ExtendedPick;
-import com.ref.extendedpick.integration.mek.MekanismEnergyCubeISearchHelper;
+import com.ref.extendedpick.integration.ae.PortableCellDeepSearchProvider;
+import com.ref.extendedpick.integration.mek.MekanismEnergyCubeSearchHelper;
 import com.ref.extendedpick.network.PacketHandler;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -22,10 +23,11 @@ public class ExtendedPickCommonModEvents {
 
   private static void registerISearchHelper() {
     SearchHelperRegistry.DefaultSearchHelper.INSTANCE.register();
-    MekanismEnergyCubeISearchHelper.INSTANCE.register();
+    MekanismEnergyCubeSearchHelper.INSTANCE.register();
   }
 
   private static void registerIDeepSearchProvider() {
     DeepSearchProviderRegistry.DefaultDeepSearchProvider.INSTANCE.register();
+    PortableCellDeepSearchProvider.INSTANCE.register();
   }
 }

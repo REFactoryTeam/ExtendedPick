@@ -10,7 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-public enum MekanismEnergyCubeISearchHelper implements ISearchHelper {
+public enum MekanismEnergyCubeSearchHelper implements ISearchHelper {
   INSTANCE;
 
   final Logger LOGGER = LogManager.getLogger();
