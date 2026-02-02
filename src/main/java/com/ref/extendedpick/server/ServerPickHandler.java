@@ -20,15 +20,15 @@ import top.theillusivec4.curios.api.CuriosCapability;
 public class ServerPickHandler {
 
   private record SearchCandidate(
-      int slotIndex, boolean isCurios, ItemStack snapshot, IDeepSearchProvider provider) {}
+      int slotIndex, boolean isCurios, ItemStack snapshot, IDeepSearchProvider<?> provider) {}
 
   private record SearchResult(
       int score,
       int containerSlot,
       boolean isCurios,
-      int internalIndex,
+      Object internalIndex,
       Item containerItemType,
-      IDeepSearchProvider provider) {}
+      IDeepSearchProvider<?> provider) {}
 
   /**
    * Handles the deep search request from a client. Initiates an asynchronous search through
@@ -70,7 +70,7 @@ public class ServerPickHandler {
       List<SearchCandidate> candidates, ItemStack stack, int index, boolean isCurios) {
     if (stack.isEmpty()) return;
 
-    IDeepSearchProvider provider =
+    IDeepSearchProvider<?> provider =
         DeepSearchProviderRegistry.getInstance().getProvider(stack.getItem());
 
     if (provider == null && stack.getCapability(ForgeCapabilities.ITEM_HANDLER).isPresent()) {
@@ -88,20 +88,21 @@ public class ServerPickHandler {
     SearchResult bestResult = null;
 
     for (SearchCandidate candidate : candidates) {
-      final int[] localBest = {ISearchHelper.Failed, -1};
+      final Object[] localBest = {ISearchHelper.Failed, null};
 
       candidate.provider.forEachItem(
           candidate.snapshot,
           (indexedStack) -> {
             int score = helper.getMatchScore(target, indexedStack.stack());
-            if (score > localBest[0]) {
+            if (score > (int) localBest[0]) {
               localBest[0] = score;
               localBest[1] = indexedStack.index();
             }
           });
 
-      if (localBest[0] > globalBestScore) {
-        globalBestScore = localBest[0];
+      int localBestScore = (int) localBest[0];
+      if (localBestScore > globalBestScore) {
+        globalBestScore = localBestScore;
         bestResult =
             new SearchResult(
                 globalBestScore,
@@ -133,7 +134,8 @@ public class ServerPickHandler {
     ItemStack sourceContainer = findSourceContainer(player, result);
     if (sourceContainer.isEmpty()) return;
 
-    ItemStack extracted = result.provider.extract(player, sourceContainer, result.internalIndex);
+    ItemStack extracted =
+        result.provider.invokeExtract(player, sourceContainer, result.internalIndex);
     if (!extracted.isEmpty()) {
       inventory.setItem(handSlot, extracted);
     }

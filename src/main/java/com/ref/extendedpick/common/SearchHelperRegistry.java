@@ -26,18 +26,6 @@ public final class SearchHelperRegistry {
 
   public void register(@NotNull Item item, @NotNull ISearchHelper helper) {
     if (registry.containsKey(item)) {
-
-      ISearchHelper existingHelper = registry.get(item);
-
-      Class<? extends ISearchHelper> existingClass = existingHelper.getClass();
-
-      Class<? extends ISearchHelper> newClass = helper.getClass();
-
-      if (existingClass.isAssignableFrom(newClass)) {
-        registry.put(item, helper);
-        return;
-      }
-
       throw new IllegalStateException("Item already registered!");
     }
 

@@ -15,9 +15,9 @@ import org.jetbrains.annotations.Nullable;
 public class DeepSearchProviderRegistry {
   private static final DeepSearchProviderRegistry INSTANCE = new DeepSearchProviderRegistry();
 
-  private final IdentityHashMap<Item, IDeepSearchProvider> registry = new IdentityHashMap<>();
+  private final IdentityHashMap<Item, IDeepSearchProvider<?>> registry = new IdentityHashMap<>();
 
-  private IDeepSearchProvider defaultDeepSearchProvider;
+  private IDeepSearchProvider<?> defaultDeepSearchProvider;
 
   private DeepSearchProviderRegistry() {}
 
@@ -25,24 +25,11 @@ public class DeepSearchProviderRegistry {
     return INSTANCE;
   }
 
-  public void register(@NotNull Item item, @NotNull IDeepSearchProvider helper) {
+  public void register(@NotNull Item item, @NotNull IDeepSearchProvider<?> provider) {
     if (registry.containsKey(item)) {
-
-      IDeepSearchProvider existingHelper = registry.get(item);
-
-      Class<? extends IDeepSearchProvider> existingClass = existingHelper.getClass();
-
-      Class<? extends IDeepSearchProvider> newClass = helper.getClass();
-
-      if (existingClass.isAssignableFrom(newClass)) {
-        registry.put(item, helper);
-        return;
-      }
-
       throw new IllegalStateException("Item already registered!");
     }
-
-    registry.put(item, helper);
+    registry.put(item, provider);
   }
 
   public void unregister(@NotNull Item item) {
@@ -50,7 +37,7 @@ public class DeepSearchProviderRegistry {
   }
 
   @Nullable
-  public IDeepSearchProvider getProvider(@NotNull Item item) {
+  public IDeepSearchProvider<?> getProvider(@NotNull Item item) {
     return registry.get(item);
   }
 
@@ -58,7 +45,7 @@ public class DeepSearchProviderRegistry {
     return registry.containsKey(item);
   }
 
-  public Map<Item, IDeepSearchProvider> getRegistryView() {
+  public Map<Item, IDeepSearchProvider<?>> getRegistryView() {
     return Collections.unmodifiableMap(registry);
   }
 
@@ -66,19 +53,20 @@ public class DeepSearchProviderRegistry {
     registry.clear();
   }
 
-  public void setDefaultHelper(@NotNull IDeepSearchProvider newDefaultHelper) {
+  public void setDefaultHelper(@NotNull IDeepSearchProvider<?> newDefaultHelper) {
     defaultDeepSearchProvider = newDefaultHelper;
   }
 
-  public IDeepSearchProvider getDefaultHelper() {
+  public IDeepSearchProvider<?> getDefaultHelper() {
     return defaultDeepSearchProvider;
   }
 
-  public enum DefaultDeepSearchProvider implements IDeepSearchProvider {
+  public enum DefaultDeepSearchProvider implements IDeepSearchProvider<Integer> {
     INSTANCE;
 
     @Override
-    public void forEachItem(@NotNull ItemStack container, @NotNull Consumer<IndexedStack> action) {
+    public void forEachItem(
+        @NotNull ItemStack container, @NotNull Consumer<IndexedStack<Integer>> action) {
       if (container.isEmpty()) return;
       container
           .getCapability(ForgeCapabilities.ITEM_HANDLER)
@@ -86,14 +74,16 @@ public class DeepSearchProviderRegistry {
               handler -> {
                 for (int i = 0; i < handler.getSlots(); i++) {
                   ItemStack stackInSlot = handler.getStackInSlot(i);
-                  action.accept(new IndexedStack(stackInSlot, i));
+                  action.accept(new IndexedStack<>(stackInSlot, i));
                 }
               });
     }
 
     @Override
     public @NotNull ItemStack extract(
-        @NotNull ServerPlayer player, @NotNull ItemStack container, int internalIndex) {
+        @NotNull ServerPlayer player,
+        @NotNull ItemStack container,
+        @NotNull Integer internalIndex) {
       if (container.isEmpty()) return ItemStack.EMPTY;
       return container
           .getCapability(ForgeCapabilities.ITEM_HANDLER)
