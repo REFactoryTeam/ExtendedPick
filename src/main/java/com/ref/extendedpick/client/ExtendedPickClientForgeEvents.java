@@ -23,6 +23,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -34,6 +35,16 @@ import net.minecraftforge.registries.ForgeRegistries;
     value = Dist.CLIENT)
 @OnlyIn(Dist.CLIENT)
 public class ExtendedPickClientForgeEvents {
+
+  @SubscribeEvent
+  public static void onClientLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+    ExtendedPick.isServerModLoaded = PacketHandler.CHANNEL.isRemotePresent(event.getConnection());
+  }
+
+  @SubscribeEvent
+  public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+    ExtendedPick.isServerModLoaded = false;
+  }
 
   @SubscribeEvent
   public static void onPickBlock(InputEvent.InteractionKeyMappingTriggered event) {

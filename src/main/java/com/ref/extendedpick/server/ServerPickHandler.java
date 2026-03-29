@@ -2,8 +2,8 @@ package com.ref.extendedpick.server;
 
 import com.ref.extendedpick.ExtendedPick;
 import com.ref.extendedpick.api.IDeepSearchProvider;
+import com.ref.extendedpick.api.IPlayerInventoryAccess;
 import com.ref.extendedpick.api.ISearchHelper;
-import com.ref.extendedpick.common.DeepSearchProviderRegistry;
 import com.ref.extendedpick.common.SearchHelperRegistry;
 import de.mari_023.ae2wtlib.AE2wtlibEvents;
 import java.util.ArrayList;
@@ -13,9 +13,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandlerModifiable;
-import top.theillusivec4.curios.api.CuriosCapability;
 
 public class ServerPickHandler {
 
@@ -30,29 +27,30 @@ public class ServerPickHandler {
       Item containerItemType,
       IDeepSearchProvider<?> provider) {}
 
+  private static class MatchContext {
+    int bestScore = ISearchHelper.Failed;
+    Object bestIndex = null;
+  }
+
   /**
    * Handles the deep search request from a client. Initiates an asynchronous search through
    * inventory containers.
    */
   public static void handleDeepSearchRequest(ServerPlayer player, ItemStack targetStack) {
-    if (!player.getMainHandItem().isEmpty()) return;
-
-    Inventory inventory = player.getInventory();
-    List<SearchCandidate> candidates = new ArrayList<>();
-
-    for (int i = 0; i < inventory.getContainerSize(); i++) {
-      collectCandidate(candidates, inventory.getItem(i), i, false);
+    if (!player.getMainHandItem().isEmpty()) {
+      return;
     }
 
-    player
-        .getCapability(CuriosCapability.INVENTORY)
-        .ifPresent(
-            handler -> {
-              IItemHandlerModifiable curiosItems = handler.getEquippedCurios();
-              for (int i = 0; i < curiosItems.getSlots(); i++) {
-                collectCandidate(candidates, curiosItems.getStackInSlot(i), i, true);
-              }
-            });
+    List<SearchCandidate> candidates = new ArrayList<>();
+    IPlayerInventoryAccess.findStacks(
+        player,
+        (stack, context) -> {
+          IDeepSearchProvider<?> provider = IDeepSearchProvider.getProvider(stack);
+          if (provider != null) {
+            candidates.add(
+                new SearchCandidate(context.index(), context.isCurios(), stack.copy(), provider));
+          }
+        });
 
     if (candidates.isEmpty()) {
       handleFallback(player, targetStack);
@@ -66,60 +64,48 @@ public class ServerPickHandler {
         .thenAcceptAsync(result -> applyResult(player, result, targetStack), player.getServer());
   }
 
-  private static void collectCandidate(
-      List<SearchCandidate> candidates, ItemStack stack, int index, boolean isCurios) {
-    if (stack.isEmpty()) return;
-
-    IDeepSearchProvider<?> provider =
-        DeepSearchProviderRegistry.getInstance().getProvider(stack.getItem());
-
-    if (provider == null && stack.getCapability(ForgeCapabilities.ITEM_HANDLER).isPresent()) {
-      provider = DeepSearchProviderRegistry.getInstance().getDefaultHelper();
-    }
-
-    if (provider != null) {
-      candidates.add(new SearchCandidate(index, isCurios, stack.copy(), provider));
-    }
-  }
-
   private static SearchResult performSearch(
       List<SearchCandidate> candidates, ItemStack target, ISearchHelper helper) {
     int globalBestScore = ISearchHelper.Failed;
     SearchResult bestResult = null;
 
     for (SearchCandidate candidate : candidates) {
-      final Object[] localBest = {ISearchHelper.Failed, null};
+      MatchContext context = new MatchContext();
 
       candidate.provider.forEachItem(
           candidate.snapshot,
-          (indexedStack) -> {
+          indexedStack -> {
             int score = helper.getMatchScore(target, indexedStack.stack());
-            if (score > (int) localBest[0]) {
-              localBest[0] = score;
-              localBest[1] = indexedStack.index();
+            if (score > context.bestScore) {
+              context.bestScore = score;
+              context.bestIndex = indexedStack.index();
             }
+            return context.bestScore != ISearchHelper.Success;
           });
 
-      int localBestScore = (int) localBest[0];
-      if (localBestScore > globalBestScore) {
-        globalBestScore = localBestScore;
+      if (context.bestScore > globalBestScore) {
+        globalBestScore = context.bestScore;
         bestResult =
             new SearchResult(
                 globalBestScore,
                 candidate.slotIndex,
                 candidate.isCurios,
-                localBest[1],
+                context.bestIndex,
                 candidate.snapshot.getItem(),
                 candidate.provider);
       }
 
-      if (globalBestScore == ISearchHelper.Success) break;
+      if (globalBestScore == ISearchHelper.Success) {
+        break;
+      }
     }
     return bestResult;
   }
 
   private static void applyResult(ServerPlayer player, SearchResult result, ItemStack targetStack) {
-    if (player.hasDisconnected()) return;
+    if (player.hasDisconnected()) {
+      return;
+    }
 
     if (result == null) {
       handleFallback(player, targetStack);
@@ -127,36 +113,23 @@ public class ServerPickHandler {
     }
 
     Inventory inventory = player.getInventory();
-    int handSlot = inventory.selected;
+    if (!inventory.getItem(inventory.selected).isEmpty()) {
+      return;
+    }
 
-    if (!inventory.getItem(handSlot).isEmpty()) return;
+    ItemStack sourceContainer =
+        IPlayerInventoryAccess.getStackFromContext(
+            player, result.containerSlot, result.isCurios, result.containerItemType);
 
-    ItemStack sourceContainer = findSourceContainer(player, result);
-    if (sourceContainer.isEmpty()) return;
+    if (sourceContainer.isEmpty()) {
+      return;
+    }
 
     ItemStack extracted =
-        result.provider.invokeExtract(player, sourceContainer, result.internalIndex);
+        result.provider.invokeExtract(player, sourceContainer, result.internalIndex, false);
     if (!extracted.isEmpty()) {
-      inventory.setItem(handSlot, extracted);
+      inventory.setItem(inventory.selected, extracted);
     }
-  }
-
-  private static ItemStack findSourceContainer(ServerPlayer player, SearchResult result) {
-    ItemStack candidate = ItemStack.EMPTY;
-
-    if (!result.isCurios) {
-      candidate = player.getInventory().getItem(result.containerSlot);
-    } else {
-      var capability = player.getCapability(CuriosCapability.INVENTORY).resolve();
-      if (capability.isPresent()) {
-        IItemHandlerModifiable curios = capability.get().getEquippedCurios();
-        if (result.containerSlot >= 0 && result.containerSlot < curios.getSlots()) {
-          candidate = curios.getStackInSlot(result.containerSlot);
-        }
-      }
-    }
-
-    return (candidate.getItem() == result.containerItemType) ? candidate : ItemStack.EMPTY;
   }
 
   private static void handleFallback(ServerPlayer player, ItemStack targetStack) {

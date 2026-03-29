@@ -18,6 +18,9 @@ public class ExtendedPick {
 
   public static final Logger LOGGER = LogUtils.getLogger();
 
+  public static boolean isServerModLoaded = false;
+
+  public static final boolean CURIOS_LOADED = ModList.get().isLoaded("curios");
   public static final boolean AE_WIRELESS_TERMINAL_LOADED = ModList.get().isLoaded("ae2wtlib");
 
   public ExtendedPick(FMLJavaModLoadingContext context) {

@@ -4,7 +4,7 @@ import com.ref.extendedpick.api.IDeepSearchProvider;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,10 +26,9 @@ public class DeepSearchProviderRegistry {
   }
 
   public void register(@NotNull Item item, @NotNull IDeepSearchProvider<?> provider) {
-    if (registry.containsKey(item)) {
+    if (registry.putIfAbsent(item, provider) != null) {
       throw new IllegalStateException("Item already registered!");
     }
-    registry.put(item, provider);
   }
 
   public void unregister(@NotNull Item item) {
@@ -66,15 +65,16 @@ public class DeepSearchProviderRegistry {
 
     @Override
     public void forEachItem(
-        @NotNull ItemStack container, @NotNull Consumer<IndexedStack<Integer>> action) {
+        @NotNull ItemStack container, @NotNull Predicate<IndexedStack<Integer>> action) {
       if (container.isEmpty()) return;
       container
           .getCapability(ForgeCapabilities.ITEM_HANDLER)
           .ifPresent(
               handler -> {
                 for (int i = 0; i < handler.getSlots(); i++) {
-                  ItemStack stackInSlot = handler.getStackInSlot(i);
-                  action.accept(new IndexedStack<>(stackInSlot, i));
+                  if (!action.test(new IndexedStack<>(handler.getStackInSlot(i), i))) {
+                    break;
+                  }
                 }
               });
     }
@@ -83,8 +83,14 @@ public class DeepSearchProviderRegistry {
     public @NotNull ItemStack extract(
         @NotNull ServerPlayer player,
         @NotNull ItemStack container,
-        @NotNull Integer internalIndex) {
-      if (container.isEmpty()) return ItemStack.EMPTY;
+        @NotNull Integer internalIndex,
+        int amount,
+        boolean simulate) {
+
+      if (container.isEmpty()) {
+        return ItemStack.EMPTY;
+      }
+
       return container
           .getCapability(ForgeCapabilities.ITEM_HANDLER)
           .map(
@@ -98,7 +104,11 @@ public class DeepSearchProviderRegistry {
                   return ItemStack.EMPTY;
                 }
 
-                return handler.extractItem(internalIndex, stackInSlot.getMaxStackSize(), false);
+                int extractAmount =
+                    amount == IDeepSearchProvider.MAX_STACK_SIZE
+                        ? stackInSlot.getMaxStackSize()
+                        : amount;
+                return handler.extractItem(internalIndex, extractAmount, simulate);
               })
           .orElse(ItemStack.EMPTY);
     }
