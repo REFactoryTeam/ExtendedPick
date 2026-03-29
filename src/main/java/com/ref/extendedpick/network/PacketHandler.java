@@ -2,6 +2,7 @@ package com.ref.extendedpick.network;
 
 import static com.ref.extendedpick.ExtendedPick.MOD_ID;
 
+import com.ref.extendedpick.integration.jei.DeepRecipeTransferPacket;
 import java.util.Optional;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
@@ -31,6 +32,13 @@ public class PacketHandler {
         DeepSearchC2SPacket::encode,
         DeepSearchC2SPacket::new,
         DeepSearchC2SPacket::handle,
+        Optional.of(NetworkDirection.PLAY_TO_SERVER));
+    CHANNEL.registerMessage(
+        nextId(),
+        DeepRecipeTransferPacket.class,
+        DeepRecipeTransferPacket::encode,
+        DeepRecipeTransferPacket::decode,
+        DeepRecipeTransferPacket::handle,
         Optional.of(NetworkDirection.PLAY_TO_SERVER));
   }
 

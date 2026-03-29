@@ -5,8 +5,16 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "extendedpick.refmap.json",
   "mixins": [
+    "ae.FillCraftingGridFromRecipePacketMixin",
+    "aea.AdvancedFillCraftingGridPacketMixin",
+    "aea.AdvancedFillProcessingGridPacketMixin"
   ],
   "client": [
+    "ae.CraftingTermMenuMixin",
+    "aea.AdvancedProcessingRecipeTransferHandlerMixin",
+    "aea.AdvancedTerminalMenuMixin",
+    "jei.BasicRecipeTransferHandlerMixin",
+    "jei.PacketRecipeTransferAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
