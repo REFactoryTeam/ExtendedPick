@@ -4,6 +4,7 @@ import appeng.helpers.IMenuCraftingPacket;
 import com.ref.aea.integration.aea.advancedterminal.AdvancedFillCraftingGridPacket;
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickCommonConfig;
 import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -22,6 +23,7 @@ public class AdvancedFillCraftingGridPacketMixin {
       ServerPlayer player,
       Ingredient ingredient,
       CallbackInfoReturnable<ItemStack> cir) {
+    if (!ExtendedPickCommonConfig.deepSearch) return;
     if (!cir.getReturnValue().isEmpty()) return;
 
     AtomicReference<ItemStack> extractedResult = new AtomicReference<>(ItemStack.EMPTY);

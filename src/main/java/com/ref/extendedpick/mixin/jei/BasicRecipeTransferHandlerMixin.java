@@ -3,6 +3,7 @@ package com.ref.extendedpick.mixin.jei;
 import com.ref.extendedpick.ExtendedPick;
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickClientConfig;
 import com.ref.extendedpick.integration.jei.DeepRecipeTransferPacket;
 import com.ref.extendedpick.integration.jei.DeepTransferData;
 import com.ref.extendedpick.integration.jei.DeepTransferItemRecord;
@@ -66,6 +67,10 @@ public class BasicRecipeTransferHandlerMixin {
     RecipeTransferOperationsResult result =
         RecipeTransferUtil.getRecipeTransferOperations(
             stackHelper, availableItemStacks, requiredItemStacks, craftingSlots);
+
+    if (!(ExtendedPickClientConfig.exPick && ExtendedPickClientConfig.exPickPacket)) {
+      return result;
+    }
 
     if (!ExtendedPick.isServerModLoaded || result.missingItems.isEmpty()) {
       return result;

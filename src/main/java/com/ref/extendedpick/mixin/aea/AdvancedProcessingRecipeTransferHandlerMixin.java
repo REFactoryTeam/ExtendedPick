@@ -6,6 +6,7 @@ import com.ref.aea.integration.aea.advancedterminal.AdvancedProcessingRecipeTran
 import com.ref.extendedpick.ExtendedPick;
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickClientConfig;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,7 @@ public class AdvancedProcessingRecipeTransferHandlerMixin {
       Map<AEKey, Long> availableCounts,
       Map<Item, Set<AEItemKey>> availableItemsMap,
       CallbackInfo ci) {
+    if (!(ExtendedPickClientConfig.exPick && ExtendedPickClientConfig.exPickPacket)) return;
     if (!ExtendedPick.isServerModLoaded) return;
 
     IPlayerInventoryAccess.findStacks(

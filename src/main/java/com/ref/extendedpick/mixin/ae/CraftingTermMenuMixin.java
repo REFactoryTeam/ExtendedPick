@@ -1,8 +1,10 @@
 package com.ref.extendedpick.mixin.ae;
 
 import appeng.menu.me.items.CraftingTermMenu;
+import com.ref.extendedpick.ExtendedPick;
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickClientConfig;
 import java.util.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -23,6 +25,8 @@ public class CraftingTermMenuMixin {
   private void onFindMissingIngredients(
       Map<Integer, Ingredient> ingredients,
       CallbackInfoReturnable<CraftingTermMenu.MissingIngredientSlots> cir) {
+    if (!(ExtendedPickClientConfig.exPick && ExtendedPickClientConfig.exPickPacket)) return;
+    if (!ExtendedPick.isServerModLoaded) return;
     CraftingTermMenu.MissingIngredientSlots result = cir.getReturnValue();
     if (result.missingSlots().isEmpty()) return;
 

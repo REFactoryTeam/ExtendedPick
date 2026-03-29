@@ -2,6 +2,7 @@ package com.ref.extendedpick.integration.jei;
 
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickCommonConfig;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -97,6 +98,7 @@ public class DeepRecipeTransferPacket {
         .enqueueWork(
             () -> {
               ServerPlayer player = ctx.get().getSender();
+              if (!ExtendedPickCommonConfig.deepSearch) return;
               if (player == null) return;
               transfer(msg, player);
             });

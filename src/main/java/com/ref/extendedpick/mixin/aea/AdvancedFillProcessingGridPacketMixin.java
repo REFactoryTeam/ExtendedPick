@@ -5,6 +5,7 @@ import com.ref.aea.integration.aea.advancedterminal.AdvancedFillProcessingGridPa
 import com.ref.aea.integration.aea.advancedterminal.AdvancedTerminalMenu;
 import com.ref.extendedpick.api.IDeepSearchProvider;
 import com.ref.extendedpick.api.IPlayerInventoryAccess;
+import com.ref.extendedpick.config.ExtendedPickCommonConfig;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +23,8 @@ public class AdvancedFillProcessingGridPacketMixin {
       AEItemKey itemKey,
       long needed,
       CallbackInfoReturnable<Long> cir) {
+    if (!ExtendedPickCommonConfig.deepSearch) return;
+
     long alreadyTaken = cir.getReturnValue();
     long remainingNeeded = needed - alreadyTaken;
 
