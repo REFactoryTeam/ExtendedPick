@@ -12,13 +12,18 @@
 ### 2. 深度搜索 (Deep Search)
 如果物品不在你的主物品栏中，ExtendedPick 可以搜索你携带的**容器物品内部**（例如背包、潜影盒或收纳袋）。
 - 这是通过 `IDeepSearchProvider` API 实现的。
+- **Forge 能力支持**：默认情况下，任何实现了 `ForgeCapabilities.ITEM_HANDLER` 的物品都会被自动支持。
 - 如果在容器内找到了目标物品，模组会向服务器发送数据包，自动将其提取出来（此功能可配置）。
 
 ### 3. 创造模式实体增强
 增强了创造模式下对实体的选取功能：
 - **Ctrl + 中键** 点击实体：将复制该实体及其完整的 NBT 数据（排除坐标/UUID），让你能生成一个属性完全相同的生物副本。
 
-### 4. 高度可配置
+### 4. JEI 配方转移集成
+将“深度搜索”逻辑延伸至 **Just Enough Items (JEI)**。
+- 当点击 JEI 中的“+”号按钮将配方转移到合成表时，如果主物品栏缺少材料，ExtendedPick 会自动检索并从你携带的容器（如背包）中提取所需原材料。
+
+### 5. 高度可配置
 可以通过 `ExtendedPickClientConfig` 进行自定义：
 - 开启/关闭深度搜索。
 - 开启/关闭选取操作的调试日志 (Debug Log)。
@@ -39,18 +44,22 @@ public class MyISearchHelper implements ISearchHelper {
 }
 ```
 
-### `IDeepSearchProvider`
-实现此接口以允许 ExtendedPick 搜索你模组中的容器（如背包）。
+### `IDeepSearchProvider<T>`
+实现此接口以允许 ExtendedPick 搜索你模组中的容器（如背包）。`T` 代表你的内部索引类型（例如槽位 ID 的 `Integer`）。
+
 ```java
-public class MyBackpackProvider implements IDeepSearchProvider {
+public class MyBackpackProvider implements IDeepSearchProvider<Integer> {
     @Override
-    public void forEachItem(ItemStack container, Consumer<IndexedStack> action) {
-        // 遍历容器内容的逻辑
+    public void forEachItem(@NotNull ItemStack container, @NotNull Predicate<IndexedStack<Integer>> action) {
+        // 遍历容器内容的逻辑。Predicate 返回 true 继续，false 停止。
     }
 
+    @NotNull
     @Override
-    public ItemStack extract(ServerPlayer player, ItemStack container, int index) {
-        // 从容器中提取物品并交给玩家的逻辑
+    public ItemStack extract(@NotNull ServerPlayer player, @NotNull ItemStack container, @NotNull Integer index, int amount, boolean simulate) {
+        // 从容器中提取物品的逻辑
+        // amount: 提取数量（为 0 时表示最大堆叠）
+        // simulate: 是否仅模拟（为 true 时不应修改实际物品堆叠）
     }
 }
 ```

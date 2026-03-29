@@ -18,13 +18,17 @@ The vanilla Pick Block function requires an exact item match. ExtendedPick intro
 ### 2. Deep Search (Container Support)
 If the item isn't found in your main inventory, ExtendedPick can search **inside** item containers (like Backpacks, Shulker Boxes, or Bundles) that you are carrying.
 - This is handled via the `IDeepSearchProvider` API.
+- **Forge Capability Support**: Items implementing `ForgeCapabilities.ITEM_HANDLER` are supported automatically by default.
 - If the item is found inside a container, the mod communicates with the server to extract it automatically (configurable).
-
 ### 3. Advanced Creative Entity Picking
 Enhances Creative Mode picking for entities:
 - **Ctrl + Pick Block (Middle Click)** on an Entity will copy the Entity with its full NBT data (excluding position/UUID), allowing you to place down an exact copy of that mob.
 
-### 4. Configurable
+### 4. JEI Recipe Transfer Integration
+Extends the "Deep Search" logic to **Just Enough Items (JEI)**.
+- When clicking the "+" button to transfer a recipe into a crafting grid, ExtendedPick will automatically search for and extract required ingredients from inside your carried containers (Backpacks, etc.) if they are missing from your main inventory.
+
+### 5. Configurable
 The mod allows customization via `ExtendedPickClientConfig`:
 - Toggle Deep Search.
 - Enable/Disable debug logging for picking actions.
@@ -45,18 +49,22 @@ public class MyISearchHelper implements ISearchHelper {
 }
 ```
 
-### `IDeepSearchProvider`
-Implement this interface to allow ExtendedPick to look inside your mod's containers (e.g., backpacks).
+### `IDeepSearchProvider<T>`
+Implement this interface to allow ExtendedPick to look inside your mod's containers. `T` represents your internal index type (e.g., `Integer` for slot ID).
+
 ```java
-public class MyBackpackProvider implements IDeepSearchProvider {
+public class MyBackpackProvider implements IDeepSearchProvider<Integer> {
     @Override
-    public void forEachItem(ItemStack container, Consumer<IndexedStack> action) {
-        // Logic to iterate container contents
+    public void forEachItem(@NotNull ItemStack container, @NotNull Predicate<IndexedStack<Integer>> action) {
+        // Logic to iterate container contents. Return true/false in predicate to continue/stop.
     }
 
+    @NotNull
     @Override
-    public ItemStack extract(ServerPlayer player, ItemStack container, int index) {
-        // Logic to remove item from container and give to player
+    public ItemStack extract(@NotNull ServerPlayer player, @NotNull ItemStack container, @NotNull Integer index, int amount, boolean simulate) {
+        // Logic to remove item from container and return it
+        // amount: 0 (MAX_STACK_SIZE) or specific count
+        // simulate: if true, do not actually modify the stack
     }
 }
 ```
